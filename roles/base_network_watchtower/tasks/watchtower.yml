@@ -1,0 +1,19 @@
+---
+- name: Check if Watchtower container exists
+  community.docker.docker_container_info:
+    name: "{{ vault_device_name }}_watchtower"
+  register: watchtower_info
+
+- name: Render watchtower compose file
+  ansible.builtin.template:
+    src: watchtower.yml.j2
+    dest: /tmp/base_network_watchtower/watchtower.yml
+    mode: '0644'
+  when: not watchtower_info.exists
+
+- name: Deploy Watchtower using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /tmp/base_network_watchtower
+    files:
+      - watchtower.yml
+  when: not watchtower_info.exists

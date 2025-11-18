@@ -1,0 +1,19 @@
+# This is the Ansible inventory file for your home lab deployment.
+#[all:vars]
+#ansible_user=ansible_user
+#ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+[servers]
+localhost ansible_connection=local
+
+# Uncomment and modify the following sections as needed
+#[webservers]
+#webserver1 ansible_host=192.168.1.10
+#webserver2 ansible_host=192.168.1.11
+
+#[databases]
+#dbserver1 ansible_host=192.168.1.20
+
+#[all:children]
+#webservers
+#databases

@@ -1,0 +1,108 @@
+---
+- name: Deploy core infrastructure if requested
+  when: deploy_core_infrastructure | bool
+  block:
+    - name: Check if home lab proxy network exists
+      community.docker.docker_network_info:
+        name: "{{ proxy_network_name }}"
+      register: network_info
+
+    - name: Create proxy Docker network
+      community.docker.docker_network:
+        name: "{{ proxy_network_name }}"
+      become: true
+      when: not network_info.exists
+      register: create_network
+
+    - name: Create core_infrastructure directory
+      ansible.builtin.file:
+        path: /tmp/core_infrastructure
+        state: directory
+
+    - name: Include Crowdsec tasks
+      ansible.builtin.include_tasks: crowdsec.yml
+      when: crowdsec_acquis_path | length > 0 and crowdsec_data_path | length > 0 and crowdsec_folder_path | length > 0
+            and (network_info.exists or create_network.changed)
+
+    - name: Include Traefik tasks
+      ansible.builtin.include_tasks: traefik_task.yml
+      when: traefik_yml_path | length > 0 and traefik_acme_path | length > 0 and traefik_config_path | length > 0
+            and traefik_logs_path | length > 0 and vault_cf_api_email | length > 0 and vault_cf_dns_api_token | length > 0
+            and vault_traefik_dashboard_user | length > 0 and vault_traefik_dashboard_password | length > 0
+            and (network_info.exists or create_network.changed)
+
+    - name: Include Portainer tasks
+      ansible.builtin.include_tasks: portainer.yml
+      when: portainer_data_path | length > 0
+            and (network_info.exists or create_network.changed)
+
+    # Required to avoid DNS resolution issues when pulling images behind Pi-hole
+    - name: Pre-pull Pi-hole and Cloudflared images
+      community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - "pihole/pihole:latest"
+        - "cloudflare/cloudflared:latest"
+      when: deploy_core_infrastructure | bool
+
+    # Ensure port 53 is available for Pi-hole by disabling systemd-resolved's DNSStubListener
+    - name: Ensure systemd-resolved DNSStubListener is disabled (idempotent)
+      ansible.builtin.ini_file:
+        path: /etc/systemd/resolved.conf
+        section: Resolve
+        option: DNSStubListener
+        value: 'no'
+        backup: yes
+      become: true
+
+    - name: Ensure /etc/resolv.conf is a symlink to systemd-resolved
+      ansible.builtin.file:
+        path: /etc/resolv.conf
+        state: link
+        src: /run/systemd/resolve/resolv.conf
+        force: yes
+      become: true
+
+    - name: Restart systemd-resolved to apply DNSStubListener change
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+      become: true
+
+    - name: Include Pi-hole plus Cloudflared tasks
+      ansible.builtin.include_tasks: pihole_plus_cloudflared.yml
+      when: pi_hole_base_path | length > 0 and pi_hole_dnsmasq_path | length > 0 and vault_pi_hole_webpassword | length > 0
+            and (network_info.exists or create_network.changed)
+
+    - name: Wait for Pi-hole to answer DNS on localhost
+      become: true
+      ansible.builtin.command: >
+        bash -c '
+          for i in {1..12}; do
+            dig @127.0.0.1 +time=1 +tries=1 example.com > /dev/null 2>&1 && exit 0 || sleep 1;
+          done;
+          exit 1
+        '
+      register: pihole_check
+      failed_when: pihole_check.rc != 0
+
+    - name: Use Pi-hole as system resolver
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: |
+          # managed by ansible: use local Pi-hole
+          nameserver 127.0.0.1    # Pi-hole first DNS resolver
+          # nameserver 1.1.1.1      # Fallback to Cloudflare if Pi-hole is down
+          search .
+        owner: root
+        group: root
+        mode: '0644'
+      become: true
+      when: pihole_check.rc == 0
+
+    - name: Delete core_infrastructure related files
+      ansible.builtin.file:
+        path: /tmp/core_infrastructure
+        state: absent
+      when: not debug_mode

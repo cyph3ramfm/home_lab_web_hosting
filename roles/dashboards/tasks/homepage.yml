@@ -1,0 +1,93 @@
+---
+- name: Check if Homepage container exists
+  community.docker.docker_container_info:
+    name: homepage
+  register: homepage_info
+
+- name: Ensure Homepage services directory exists
+  ansible.builtin.file:
+    path: "{{ homepage_config_path }}"
+    state: directory
+    mode: '0777'
+  when: not homepage_info.exists
+  become: true
+
+- name: Deploy Homepage bookmarks configuration
+  ansible.builtin.template:
+    src: bookmarks.yaml.j2
+    dest: "{{ homepage_config_path }}/bookmarks.yaml"
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Render Homepage docker file
+  ansible.builtin.template:
+    src: docker.yaml.j2
+    dest: /tmp/dashboards/docker.yaml
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Deploy Homepage docker configuration
+  ansible.builtin.template:
+    src: /tmp/dashboards/docker.yaml
+    dest: "{{ homepage_config_path }}/docker.yaml"
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Deploy Homepage settings configuration
+  ansible.builtin.template:
+    src: settings.yaml.j2
+    dest: "{{ homepage_config_path }}/settings.yaml"
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Render Homepage services file
+  ansible.builtin.template:
+    src: services.yaml.j2
+    dest: /tmp/dashboards/services.yml
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Deploy Homepage services configuration
+  ansible.builtin.template:
+    src: /tmp/dashboards/services.yml
+    dest: "{{ homepage_config_path }}/services.yaml"
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Deploy Homepage widgets configuration
+  ansible.builtin.template:
+    src: widgets.yaml.j2
+    dest: "{{ homepage_config_path }}/widgets.yaml"
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Render Homepage compose file
+  ansible.builtin.template:
+    src: homepage.yml.j2
+    dest: /tmp/dashboards/homepage.yml
+    mode: '0644'
+  when: not homepage_info.exists
+
+- name: Deploy Homepage using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /tmp/dashboards
+    files:
+      - homepage.yml
+  when: not homepage_info.exists
+
+#- name: Wait for Homepage to be available
+#  ansible.builtin.uri:
+#    url: "http://{{ homepage_domain_prefix }}.{{ vault_domain }}"
+#    status_code: 200
+#  register: homepage_result
+#  until: homepage_result.status == 200
+#  retries: 30
+#  delay: 10
+#  when: not homepage_info.exists
+
+- name: Show Homepage URL
+  ansible.builtin.debug:
+    msg:
+      - "Your Home Lab Dashboard will be available at https://{{ homepage_domain_prefix }}.{{ vault_domain }} once you configure Pi-hole to be your primary DNS make sure to add this URL to your Pi-hole Local DNS list."
+      - "Be sure to bookmark this URL for easy access."
+      - "To configure Pi-hole you can access it through http://{{ ansible_default_ipv4.address }}:10000/admin (for the Pi-hole server deployed as part of this repository)."

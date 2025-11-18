@@ -1,0 +1,58 @@
+---
+- name: Check if Traefik container exists
+  community.docker.docker_container_info:
+    name: traefik
+  register: traefik_info
+
+- name: Ensure Traefik data storage directory exists
+  ansible.builtin.file:
+    path: "{{ traefik_base_path }}"
+    state: directory
+    mode: '0755'
+  when: not traefik_info.exists
+  become: true
+
+- name: Create Traefik acme.json with 600 permissions
+  ansible.builtin.file:
+    path: "{{ traefik_base_path }}/acme.json"
+    state: touch
+    mode: '0600'
+  when: not traefik_info.exists
+  become: true
+
+- name: Render Traefik yaml file
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: /tmp/core_infrastructure/traefik.yml
+    mode: '0644'
+  when: not traefik_info.exists
+
+- name: Create Traefik yaml file
+  ansible.builtin.template:
+    src: /tmp/core_infrastructure/traefik.yml
+    dest: "{{ traefik_base_path }}/traefik.yml"
+    mode: '0644'
+  when: not traefik_info.exists
+  become: true
+
+- name: Create Traefik config file
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ traefik_base_path }}/config.yml"
+    mode: '0644'
+  when: not traefik_info.exists
+  become: true
+
+- name: Render Traefik compose file
+  ansible.builtin.template:
+    src: traefik_compose.yml.j2
+    dest: /tmp/core_infrastructure/traefik_compose.yml
+    mode: '0644'
+  when: not traefik_info.exists
+
+- name: Deploy Traefik using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /tmp/core_infrastructure
+    files:
+      - traefik_compose.yml
+  when: not traefik_info.exists

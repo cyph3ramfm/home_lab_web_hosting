@@ -1,0 +1,86 @@
+---
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared    
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "50m"    
+    command: proxy-dns
+    environment:
+      - "TUNNEL_DNS_UPSTREAM=https://1.1.1.1/dns-query,https://1.0.0.1/dns-query,https://9.9.9.9/dns-query,https://149.112.112.9/dns-query"
+
+      # Listen on an unprivileged port
+      - "TUNNEL_DNS_PORT=5053"
+
+      # Listen on all interfaces
+      - "TUNNEL_DNS_ADDRESS=0.0.0.0"
+
+    # Attach cloudflared only to the private network
+    networks:
+      pihole_internal:
+        ipv4_address: 172.70.9.2
+    security_opt:
+      - no-new-privileges:true
+
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    hostname: pihole
+    restart: unless-stopped    
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "50m"
+    ports:  
+      - 53:53/tcp
+      - 53:53/udp
+      #- "67:67/udp"
+      - 10000:80/tcp
+      #- "443:443/tcp"    
+    environment:
+      TZ: {{ timezone }}
+      FTLCONF_webserver_api_password: {{ vault_pi_hole_webpassword }}
+      FTLCONF_dns_upstreams: '172.70.9.2#5053'
+      FTLCONF_dns_listeningMode: 'all'
+      VIRTUAL_HOST: {{ pihole_domain_prefix }}.{{ vault_domain }}      
+    # Volumes store your data between container upgrades
+    volumes:
+      - {{ pi_hole_base_path }}:/etc/pihole/
+      # - {{ pi_hole_dnsmasq_path }}:/etc/dnsmasq.d/      
+    # Recommended but not required (DHCP needs NET_ADMIN)
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    #cap_add:
+    #  - NET_ADMIN
+    networks:
+      pihole_internal:
+        ipv4_address: 172.70.9.3
+      {{ proxy_network_name }}:
+      
+    depends_on:
+      - cloudflared
+    labels:    
+      - "traefik.enable=true"
+      - "traefik.http.routers.pihole.entrypoints=http"
+      - "traefik.http.routers.pihole.rule=Host(`{{ pihole_domain_prefix }}.{{ vault_domain }}`)"
+      - "traefik.http.middlewares.pihole-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.pihole.middlewares=pihole-https-redirect"
+      - "traefik.http.routers.pihole-secure.entrypoints=https"
+      - "traefik.http.routers.pihole-secure.rule=Host(`{{ pihole_domain_prefix }}.{{ vault_domain }}`)"
+      - "traefik.http.routers.pihole-secure.tls=true"
+      - "traefik.http.routers.pihole-secure.service=pihole"
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+      - "traefik.docker.network={{ proxy_network_name }}"
+
+networks:
+  pihole_internal:
+     ipam:
+       config:
+         - subnet: 172.70.9.0/29
+     name: pihole_internal
+  {{ proxy_network_name }}:
+    external: true

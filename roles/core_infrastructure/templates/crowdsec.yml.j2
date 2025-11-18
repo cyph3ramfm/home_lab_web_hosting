@@ -1,0 +1,49 @@
+---
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "50m"
+    environment:
+      GID: "${GID-1000}"
+      COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik"
+    volumes:
+      - {{ crowdsec_acquis_path }}:/etc/crowdsec/acquis.yaml
+      - {{ crowdsec_data_path }}:/var/lib/crowdsec/data/
+      - {{ crowdsec_folder_path }}:/etc/crowdsec/
+      - {{ traefik_logs_path }}:/var/log/traefik/:ro
+    security_opt:
+      - no-new-privileges:true    
+    labels:
+      - "com.centurylinklabs.watchtower.enable = false" # DISABLE WATCHTOWER UPDATES --- RECOMMENDED ---
+    networks:
+      - {{ proxy_network_name }}
+
+  bouncer-traefik:
+    image: docker.io/fbonalair/traefik-crowdsec-bouncer:latest
+    container_name: bouncer-traefik
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "50m"
+    environment:
+      CROWDSEC_BOUNCER_API_KEY: {{ vault_crowdsec_bouncer_api_key }}
+      CROWDSEC_AGENT_HOST: crowdsec:8080
+    depends_on:
+      - crowdsec    
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable = false" # DISABLE WATCHTOWER UPDATES --- RECOMMENDED ---
+    networks:
+      - {{ proxy_network_name }}
+
+
+networks:
+  {{ proxy_network_name }}:
+    external: true

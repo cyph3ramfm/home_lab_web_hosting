@@ -1,0 +1,38 @@
+---
+######################### General settings #########################
+vault_device_name:  # Name of the device
+
+
+######################### Base network and watchtower #########################
+### Watchtower
+# This file contains sensitive information for the Ansible playbook used to deploy the home lab.
+# Modify these variables as needed for your environment.
+vault_watchtower_notification_email_from:  # Email address from which notifications will be sent
+vault_watchtower_notification_email_to:  # Email address to which notifications will be sent
+vault_watchtower_notification_email_server_user:  # Email server user for notifications
+vault_watchtower_notification_email_server_password:  # Email server password for notifications
+# Note: Ensure that the email server supports SMTP and that the credentials are correct.
+
+
+######################### Core infrastructure #########################
+### Domain - Applicable to all containers
+vault_domain:  # Domain url
+
+### Pi-hole
+vault_pi_hole_webpassword:  # Password for Pi-hole web interface
+
+### Traefik
+vault_cf_api_email:  # Email for Cloudflare API
+vault_cf_dns_api_token:  # Token for Cloudflare DNS API
+#vault_cf_api_key_traefik: # Key for Cloudflare API (optional, use token if available)
+vault_traefik_dashboard_user:  # User for Traefik dashboard
+vault_traefik_dashboard_password:  # Password for Traefik dashboard (BASE-20 password, needs to be generated from desired password)
+# If the resulting BASE-20 password contains $, you need to escape ALL MANUALLY with another $ (i.e. add another $ before each $ in the password)
+# Otherwise, you won't be able to login to Traefik dashboard
+
+### Crowdsec
+vault_crowdsec_bouncer_api_key:  # API key for Crowdsec Traefik bouncer (leave empty to generate a new one during deployment)
+
+######################### Dashboards #########################
+### Homepage
+vault_homepage_allowed_hosts:  # List of allowed hosts for homepage

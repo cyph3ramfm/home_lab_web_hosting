@@ -1,0 +1,37 @@
+---
+services:
+  glances:
+    image: nicolargo/glances:ubuntu-latest-full
+    container_name: glances
+    hostname: glances
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    pid: host
+    environment:
+      - "TZ={{ timezone }}"
+      - "GLANCES_OPT=-w"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - {{ glances_config_path }}:/glances/conf/glances.conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glances.entrypoints=http"
+      - "traefik.http.routers.glances.rule=Host(`{{ glances_domain_prefix }}.{{ vault_domain }}`)"
+      - "traefik.http.middlewares.glances-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.glances.middlewares=glances-https-redirect"
+      - "traefik.http.routers.glances-secure.entrypoints=https"
+      - "traefik.http.routers.glances-secure.rule=Host(`{{ glances_domain_prefix }}.{{ vault_domain }}`)"
+      - "traefik.http.routers.glances-secure.tls=true"
+      - "traefik.http.routers.glances-secure.service=glances"
+      - "traefik.http.services.glances.loadbalancer.server.port=61208"
+      - "traefik.docker.network={{ proxy_network_name }}"      
+    networks:
+      - {{ proxy_network_name }}
+      
+
+networks:
+  {{ proxy_network_name }}:
+    external: true

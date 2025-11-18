@@ -1,0 +1,31 @@
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: "{{ vault_device_name }}_watchtower" 
+    hostname: "{{ vault_device_name }}_watchtower"    
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+          max-size: "50m"
+    environment:
+      WATCHTOWER_SCHEDULE: "{{ watchtower_schedule }}" 
+      WATCHTOWER_CLEANUP: "{{ watchtower_cleanup }}" 
+      WATCHTOWER_DEBUG: "{{ watchtower_debug }}"      
+      WATCHTOWER_NOTIFICATIONS: "email"
+      WATCHTOWER_NOTIFICATION_EMAIL_FROM: "{{ vault_watchtower_notification_email_from }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_TO: "{{ vault_watchtower_notification_email_to }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER: "{{ watchtower_notification_email_server }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT: "{{ watchtower_notification_email_server_port }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER: "{{ vault_watchtower_notification_email_server_user }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD: "{{ vault_watchtower_notification_email_server_password }}"
+      WATCHTOWER_NOTIFICATION_EMAIL_DELAY: "{{ watchtower_notification_delay }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - {{ home_lab_network_name }}
+      
+networks:
+  {{ home_lab_network_name }}:
+    external: true

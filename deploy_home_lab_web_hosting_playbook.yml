@@ -1,0 +1,11 @@
+---
+- name: Deploy Home Lab
+  hosts: all
+  vars_files:
+    - group_vars/main.yml
+    - group_vars/vault.yml
+
+  roles:
+    - base_network_watchtower
+    - core_infrastructure
+    - dashboards

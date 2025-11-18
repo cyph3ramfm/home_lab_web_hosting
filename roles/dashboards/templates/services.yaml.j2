@@ -1,0 +1,37 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/latest/configs/services
+
+####################
+#  NETWORK COLUMN
+####################
+
+- Network & Monitoring:
+    - Portainer:
+        href: https://{{ portainer_domain_prefix }}.{{ vault_domain }}
+        icon: portainer
+        server: {{ vault_device_name }}
+        container: portainer
+
+    - Pi-hole:
+        href: https://{{ pihole_domain_prefix }}.{{ vault_domain }}/admin
+        icon: pi-hole
+        server: {{ vault_device_name }}
+        container: pihole
+        widget:
+          type: pihole
+          url: https://{{ pihole_domain_prefix }}.{{ vault_domain }}
+          version: 6
+          key: {{ vault_homepage_services_pihole_widget_key }}
+
+    - Traefik:
+        href: https://{{ traefik_domain_prefix }}.{{ vault_domain }}
+        icon: traefik
+        server: {{ vault_device_name }}
+        container: traefik
+
+    - Glances:
+        href: https://{{ glances_domain_prefix }}.{{ vault_domain }}
+        icon: glances
+        server: {{ vault_device_name }}
+        container: glances

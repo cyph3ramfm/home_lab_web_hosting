@@ -1,0 +1,34 @@
+---
+- name: Deploy base network and Watchtower if requested
+  when: deploy_base_network_watchtower | bool
+  block:
+    - name: Check if home lab Docker network exists
+      community.docker.docker_network_info:
+        name: "{{ home_lab_network_name }}"
+      become: true
+      register: home_lab_network_info
+
+    - name: Create home lab Docker network
+      community.docker.docker_network:
+        name: "{{ home_lab_network_name }}"
+        ipam_config:
+          - subnet: "{{ home_lab_network_subnet }}"
+      become: true
+      when: not home_lab_network_info.exists
+
+    - name: Create base_network_watchtower directory
+      ansible.builtin.file:
+        path: /tmp/base_network_watchtower
+        state: directory
+
+    - name: Include Watchtower tasks
+      ansible.builtin.include_tasks: watchtower.yml
+      when: vault_watchtower_notification_email_from | length > 0 and vault_watchtower_notification_email_to | length > 0
+            and vault_watchtower_notification_email_server_user | length > 0 and vault_watchtower_notification_email_server_password | length > 0
+
+    - name: Delete base_network_watchtower related files
+      ansible.builtin.file:
+        path: /tmp/base_network_watchtower
+        state: absent
+
+      when: not debug_mode

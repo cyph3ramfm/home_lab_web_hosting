@@ -1,0 +1,19 @@
+---
+- name: Check if Portainer container exists
+  community.docker.docker_container_info:
+    name: portainer
+  register: portainer_info
+
+- name: Render Portainer compose file
+  ansible.builtin.template:
+    src: portainer.yml.j2
+    dest: /tmp/core_infrastructure/portainer.yml
+    mode: '0644'
+  when: not portainer_info.exists
+
+- name: Deploy Portainer using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /tmp/core_infrastructure
+    files:
+      - portainer.yml
+  when: not portainer_info.exists

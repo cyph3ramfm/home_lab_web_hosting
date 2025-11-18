@@ -1,0 +1,62 @@
+---
+# This file contains default variables for the Ansible playbook used to deploy the home lab.
+# Modify these variables as needed for your environment.
+
+######################### Global settings #########################
+timezone: "Europe/London"  # Set your local timezone for accurate log times
+debug_mode: false  # Set to true to enable to enable visibility container deployment files
+
+######################### Control flow #########################
+deploy_base_network_watchtower: true  # Set to true to deploy homelab base infrastructure (network, watchtower to manage containers)
+deploy_core_infrastructure: true  # Set to true to deploy portainer, pi-hole, traefik, cloudflare and crowdsec
+deploy_dashboards: true  # Set to true to deploy dashboards (homepage, glances, uptime-kuma)
+
+
+######################### Base infrastructure #########################
+### Network settings
+home_lab_network_name: home_lab
+home_lab_network_subnet: 172.16.3.0/24
+
+### Watchtower
+watchtower_schedule: "0 0 5 * * *"  # Cron schedule for watchtower updates. Adjust as appropriate
+watchtower_cleanup: true  # Enable cleanup of old images
+watchtower_debug: true  # Enable debug mode for watchtower
+watchtower_notification_delay: 2  # Delay for email notifications
+watchtower_notification_email_server: "smtp.gmail.com" # Gmail email server for notifications
+watchtower_notification_email_server_port: "587" # Port for Gmail email server
+
+
+######################### Core infrastructure #########################
+proxy_network_name: proxy
+
+### Pi-hole
+pi_hole_base_path: /var/docker_data/pihole # Path to Pi-hole base directory
+pi_hole_dnsmasq_path: /var/docker_data/pihole/etc-dnsmasq.d # Path to Pi-hole dnsmasq directory
+pihole_domain_prefix: pihole-external # Domain prefix for Pi-hole
+
+### Portainer
+portainer_data_path: /var/docker_data/portainer/data # Path to Portainer data directory
+portainer_domain_prefix: portainer-external  # Domain prefix for Portainer
+
+### Traefik
+traefik_base_path: /var/docker_data/traefik # Path to Traefik base directory
+traefik_yml_path: /var/docker_data/traefik/traefik.yml	 # <-- file path -- FILE NEEDS TO EXIST
+traefik_acme_path: /var/docker_data/traefik/acme.json	# <-- file path -- FILE NEEDS TO EXIST
+traefik_config_path: /var/docker_data/traefik/config.yml	 # <-- file path -- FILE NEEDS TO EXIST
+traefik_logs_path: /var/docker_data/traefik/logs	# <-- folder path
+traefik_domain_prefix: traefik-external  # Domain prefix for Traefik
+
+### Crowdsec
+crowdsec_acquis_path: /var/docker_data/crowdsec/acquis.yaml # Path to Crowdsec acquisition files
+crowdsec_data_path: /var/docker_data/crowdsec/db	# Path to Crowdsec data file
+crowdsec_folder_path: /var/docker_data/crowdsec/	# Path to Crowdsec configuration file
+
+
+######################### Dashboards #########################
+### Homepage
+homepage_config_path: /var/docker_data/homepage/config # Path to store homepage configuration files
+homepage_domain_prefix: homepage-external # Domain prefix for Homepage
+
+### Glances
+glances_config_path: /var/docker_data/glances/config # Path to store Glances configuration files
+glances_domain_prefix: glances-external # Domain prefix for Glances dashboard

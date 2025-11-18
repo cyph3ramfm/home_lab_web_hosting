@@ -1,0 +1,19 @@
+---
+- name: Check if Glances container exists
+  community.docker.docker_container_info:
+    name: glances
+  register: glances_info
+
+- name: Render Glances compose file
+  ansible.builtin.template:
+    src: glances.yml.j2
+    dest: /tmp/dashboards/glances.yml
+    mode: '0644'
+  when: not glances_info.exists
+
+- name: Deploy Glances using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /tmp/dashboards
+    files:
+      - glances.yml
+  when: not glances_info.exists
